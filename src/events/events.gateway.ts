@@ -9,6 +9,7 @@ export class EventsGateway implements OnGatewayDisconnect {
   @WebSocketServer() server: Server;
   private players = [];
   private mapElements = {
+    players: [],
     bullets: [],
   };
   private time = 0;
@@ -16,27 +17,29 @@ export class EventsGateway implements OnGatewayDisconnect {
   private logger: Logger = new Logger('EventsGateway');
 
   private intervalEmit = setInterval(() => {
-    const object = {
-      players: this.players,
-      mapElements: this.mapElements,
-    };
-    this.server.emit('position', object);
+    this.server.emit('position', this.mapElements);
   }, 10);
 
   private intervalRun = setInterval(() => {
     for (let player in this.players) {
-      if (this.players[player].controls.isKeyDown.a) this.players[player].position.x -= 2;
-      if (this.players[player].controls.isKeyDown.d) this.players[player].position.x += 2;
-      if (this.players[player].controls.isKeyDown.w) this.players[player].position.y -= 2;
-      if (this.players[player].controls.isKeyDown.s) this.players[player].position.y += 2;
+      if (this.players[player].controls.isKeyDown.a) {
+        if (this.mapElements.players[player].position.x < 2) this.mapElements.players[player].position.x = 0;
+        else this.mapElements.players[player].position.x -= 2;
+      }
+      if (this.players[player].controls.isKeyDown.d) this.mapElements.players[player].position.x += 2;
+      if (this.players[player].controls.isKeyDown.w) {
+        if (this.mapElements.players[player].position.y < 2) this.mapElements.players[player].position.y = 0;
+        else this.mapElements.players[player].position.y -= 2;
+      }
+      if (this.players[player].controls.isKeyDown.s) this.mapElements.players[player].position.y += 2;
 
-      if (this.players[player].controls.isMouseDown) {
+      if (this.players[player].controls.isMouseDown || this.players[player].controls.autofire) {
         const found = this.mapElements.bullets.reverse().find(bullet => bullet.id === this.players[player].id);
         this.mapElements.bullets.reverse();
         if (found && (this.time - found.time + 1000) % 1000 < 50) {
         } else {
-          const sideA = this.players[player].controls.x - this.players[player].position.x;
-          const sideB = this.players[player].controls.y - this.players[player].position.y;
+          const sideA = this.players[player].controls.x - this.mapElements.players[player].position.x;
+          const sideB = this.players[player].controls.y - this.mapElements.players[player].position.y;
           const sideC = Math.sqrt(sideA * sideA + sideB * sideB);
           let directionX;
           let directionY;
@@ -48,9 +51,12 @@ export class EventsGateway implements OnGatewayDisconnect {
             directionY = 6 * sideB / sideC;
           }
           this.mapElements.bullets.push({
-            id: this.players[player].id,
-            color: this.players[player].color,
-            position: { x: this.players[player].position.x, y: this.players[player].position.y },
+            id: this.mapElements.players[player].id,
+            color: this.mapElements.players[player].color,
+            position: {
+              x: this.mapElements.players[player].position.x,
+              y: this.mapElements.players[player].position.y,
+            },
             time: this.time,
             lifeTime: 100,
             direction: { x: directionX, y: directionY },
@@ -85,8 +91,11 @@ export class EventsGateway implements OnGatewayDisconnect {
     this.logger.log(`Client connected: ${client.id}`);
     this.players.push({
       id: client.id,
+      controls: { x: 0, y: 0, isMouseDown: false, isKeyDown: { a: false, d: false, w: false, s: false }, autofire: false },
+    });
+    this.mapElements.players.push({
+      id: client.id,
       color: this.colors[Math.floor(Math.random() * this.colors.length)],
-      controls: { x: 0, y: 0, isMouseDown: false, isKeyDown: { a: false, d: false, w: false, s: false } },
       position: { x: Math.floor(Math.random() * 500), y: Math.floor(Math.random() * 500) },
     });
   }
@@ -94,6 +103,9 @@ export class EventsGateway implements OnGatewayDisconnect {
   handleDisconnect(client: any): any {
     this.logger.log(`Client disconnected: ${client.id}`);
     this.players = this.players.filter(function(obj) {
+      return obj.id !== client.id;
+    });
+    this.mapElements.players = this.mapElements.players.filter(function(obj) {
       return obj.id !== client.id;
     });
   }
