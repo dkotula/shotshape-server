@@ -23,54 +23,86 @@ export class EventsGateway implements OnGatewayDisconnect {
   }, 10);
 
   private intervalRun = setInterval(() => {
-    if (this.mapElements.bonuses.length < 10 && this.time % 200 === 0) {
+    if (this.mapElements.bonuses.length < 6 && this.time % 100 === 0) {
       this.mapElements.bonuses.push({
         src: bonuses[Math.floor(Math.random() * bonuses.length)],
         position: { x: Math.floor(Math.random() * 1000), y: Math.floor(Math.random() * 800) },
       });
     }
     for (let player in this.players) {
-      if (this.players[player].controls.isKeyDown.a) {
-        if (this.mapElements.players[player].position.x < 2) this.mapElements.players[player].position.x = 0;
-        else this.mapElements.players[player].position.x -= 2;
-      }
-      if (this.players[player].controls.isKeyDown.d) this.mapElements.players[player].position.x += 2;
-      if (this.players[player].controls.isKeyDown.w) {
-        if (this.mapElements.players[player].position.y < 2) this.mapElements.players[player].position.y = 0;
-        else this.mapElements.players[player].position.y -= 2;
-      }
-      if (this.players[player].controls.isKeyDown.s) this.mapElements.players[player].position.y += 2;
+      if (this.players[player].isAlive) {
+        if (this.players[player].controls.isKeyDown.a) {
+          if (this.mapElements.players[player].position.x < 2) this.mapElements.players[player].position.x = 0;
+          else this.mapElements.players[player].position.x -= 2;
+        }
+        if (this.players[player].controls.isKeyDown.d) this.mapElements.players[player].position.x += 2;
+        if (this.players[player].controls.isKeyDown.w) {
+          if (this.mapElements.players[player].position.y < 2) this.mapElements.players[player].position.y = 0;
+          else this.mapElements.players[player].position.y -= 2;
+        }
+        if (this.players[player].controls.isKeyDown.s) this.mapElements.players[player].position.y += 2;
 
-      this.mapElements.players[player].rotation = (this.mapElements.players[player].rotation + 2) % 720;
-
-      if (this.players[player].controls.isMouseDown || this.players[player].controls.autofire) {
-        const found = this.mapElements.bullets.reverse().find(bullet => bullet.id === this.players[player].id);
-        this.mapElements.bullets.reverse();
-        if (found && (this.time - found.time + 1000) % 1000 < 50) {
-        } else {
-          const sideA = this.players[player].controls.x - this.mapElements.players[player].position.x;
-          const sideB = this.players[player].controls.y - this.mapElements.players[player].position.y;
-          const sideC = Math.sqrt(sideA * sideA + sideB * sideB);
-          let directionX;
-          let directionY;
-          if (sideC === 0) {
-            directionX = 3 * sqrt_2;
-            directionY = 3 * sqrt_2;
-          } else {
-            directionX = 6 * sideA / sideC;
-            directionY = 6 * sideB / sideC;
+        this.mapElements.players[player].rotation = (this.mapElements.players[player].rotation + 2) % 720;
+        for (let i = 0; i < this.mapElements.bonuses.length; i++) {
+          const sideA = this.mapElements.players[player].position.x - this.mapElements.bonuses[i].position.x;
+          const sideB = this.mapElements.players[player].position.y - this.mapElements.bonuses[i].position.y;
+          if (Math.sqrt(sideA * sideA + sideB * sideB) < 45) {
+            switch (this.mapElements.players[player].src) {
+              case 'Bullet_minus':
+                break;
+              case 'Bullet_plus':
+                break;
+              case 'Bullet_strength_minus':
+                break;
+              case 'Bullet_strength_plus':
+                break;
+              case 'life_full':
+                break;
+              case 'life_full_now':
+                break;
+              case 'life_minus':
+                break;
+              case 'Speed_x2_minus':
+                break;
+              case 'Speed_x2_plus':
+                break;
+              case 'Speed_x3_minus':
+                break;
+              case 'Speed_x3_plus':
+                break;
+            }
+            this.mapElements.bonuses.splice(i, 1);
           }
-          this.mapElements.bullets.push({
-            id: this.mapElements.players[player].id,
-            color: this.mapElements.players[player].color,
-            position: {
-              x: this.mapElements.players[player].position.x,
-              y: this.mapElements.players[player].position.y,
-            },
-            time: this.time,
-            lifeTime: 100,
-            direction: { x: directionX, y: directionY },
-          });
+        }
+
+        if (this.players[player].controls.isMouseDown || this.players[player].controls.autofire) {
+          if (this.mapElements.players[player].lastShot !== -1 && (this.time - this.mapElements.players[player].lastShot + 1000) % 1000 < 50) {
+          } else {
+            const sideA = this.players[player].controls.x - this.mapElements.players[player].position.x;
+            const sideB = this.players[player].controls.y - this.mapElements.players[player].position.y;
+            const sideC = Math.sqrt(sideA * sideA + sideB * sideB);
+            let directionX;
+            let directionY;
+            if (sideC === 0) {
+              directionX = 3 * sqrt_2;
+              directionY = 3 * sqrt_2;
+            } else {
+              directionX = 6 * sideA / sideC;
+              directionY = 6 * sideB / sideC;
+            }
+            this.mapElements.bullets.push({
+              id: this.mapElements.players[player].id,
+              color: this.mapElements.players[player].color,
+              position: {
+                x: this.mapElements.players[player].position.x,
+                y: this.mapElements.players[player].position.y,
+              },
+              time: this.time,
+              lifeTime: 100,
+              direction: { x: directionX, y: directionY },
+            });
+            this.mapElements.players[player].lastShot = this.time;
+          }
         }
       }
     }
@@ -81,6 +113,20 @@ export class EventsGateway implements OnGatewayDisconnect {
         this.mapElements.bullets[bullet].position.x += this.mapElements.bullets[bullet].direction.x;
         this.mapElements.bullets[bullet].position.y += this.mapElements.bullets[bullet].direction.y;
         this.mapElements.bullets[bullet].lifeTime--;
+        for (let i = 0; i < this.mapElements.players.length; i++) {
+          if (this.mapElements.players[i].hp > 0){
+            const sideA = this.mapElements.players[i].position.x - this.mapElements.bullets[bullet].position.x;
+            const sideB = this.mapElements.players[i].position.y - this.mapElements.bullets[bullet].position.y;
+            if (this.mapElements.players[i].id !== this.mapElements.bullets[bullet].id && Math.sqrt(sideA * sideA + sideB * sideB) < 25) {
+              this.mapElements.players[i].hp -= this.mapElements.bullets[bullet].lifeTime / 2;
+              if (this.mapElements.players[i].hp <= 0) {
+                this.players[i].isAlive = false;
+              }
+              this.mapElements.bullets.splice(parseInt(bullet),1);
+              break;
+            }
+          }
+        }
       }
     }
     this.time = (this.time + 1) % 1000;
@@ -108,12 +154,15 @@ export class EventsGateway implements OnGatewayDisconnect {
         isKeyDown: { a: false, d: false, w: false, s: false },
         autofire: false,
       },
+      isAlive: true,
     });
     this.mapElements.players.push({
       id: client.id,
       color: this.colors[Math.floor(Math.random() * this.colors.length)],
       position: { x: Math.floor(Math.random() * 500), y: Math.floor(Math.random() * 500) },
       rotation: 0,
+      hp: 100,
+      lastShot: -1,
     });
   }
 
