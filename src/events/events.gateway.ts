@@ -63,7 +63,7 @@ export class EventsGateway implements OnGatewayDisconnect {
         }
         if (this.mapElements.players[player].regenerationTime > 0) {
           this.mapElements.players[player].regenerationTime--
-          if (this.mapElements.players[player].regenerationTime % 100) {
+          if (this.mapElements.players[player].regenerationTime % 100 === 0) {
             if (this.mapElements.players[player].hp > 90) {
               this.mapElements.players[player].hp = 100;
             }
