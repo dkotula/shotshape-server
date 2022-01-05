@@ -26,49 +26,97 @@ export class EventsGateway implements OnGatewayDisconnect {
     if (this.mapElements.bonuses.length < 6 && this.time % 100 === 0) {
       this.mapElements.bonuses.push({
         src: bonuses[Math.floor(Math.random() * bonuses.length)],
-        position: { x: Math.floor(Math.random() * 1000), y: Math.floor(Math.random() * 800) },
+        position: { x: Math.floor(Math.random() * 1000 + 50), y: Math.floor(Math.random() * 800 + 50) },
       });
     }
     for (let player in this.players) {
       if (this.players[player].isAlive) {
         if (this.players[player].controls.isKeyDown.a) {
-          if (this.mapElements.players[player].position.x < 2) this.mapElements.players[player].position.x = 0;
-          else this.mapElements.players[player].position.x -= 2;
+          if (this.mapElements.players[player].position.x < 2 * this.mapElements.players[player].speed) this.mapElements.players[player].position.x = 0;
+          else this.mapElements.players[player].position.x -= 2 * this.mapElements.players[player].speed;
         }
-        if (this.players[player].controls.isKeyDown.d) this.mapElements.players[player].position.x += 2;
+        if (this.players[player].controls.isKeyDown.d) this.mapElements.players[player].position.x += 2 * this.mapElements.players[player].speed;
         if (this.players[player].controls.isKeyDown.w) {
-          if (this.mapElements.players[player].position.y < 2) this.mapElements.players[player].position.y = 0;
-          else this.mapElements.players[player].position.y -= 2;
+          if (this.mapElements.players[player].position.y < 2 * this.mapElements.players[player].speed) this.mapElements.players[player].position.y = 0;
+          else this.mapElements.players[player].position.y -= 2 * this.mapElements.players[player].speed;
         }
-        if (this.players[player].controls.isKeyDown.s) this.mapElements.players[player].position.y += 2;
+        if (this.players[player].controls.isKeyDown.s) this.mapElements.players[player].position.y += 2 * this.mapElements.players[player].speed;
 
         this.mapElements.players[player].rotation = (this.mapElements.players[player].rotation + 2) % 720;
+        if (this.mapElements.players[player].speedTime > 0) {
+          this.mapElements.players[player].speedTime--
+          if (this.mapElements.players[player].speedTime === 0) {
+            this.mapElements.players[player].speed = 1;
+          }
+        }
+        if (this.mapElements.players[player].bulletSpeedTime > 0) {
+          this.mapElements.players[player].bulletSpeedTime--
+          if (this.mapElements.players[player].bulletSpeedTime === 0) {
+            this.mapElements.players[player].bulletSpeed = 1;
+          }
+        }
+        if (this.mapElements.players[player].strengthTime > 0) {
+          this.mapElements.players[player].strengthTime--
+          if (this.mapElements.players[player].strengthTime === 0) {
+            this.mapElements.players[player].strength = 1;
+          }
+        }
+        if (this.mapElements.players[player].regenerationTime > 0) {
+          this.mapElements.players[player].regenerationTime--
+          if (this.mapElements.players[player].regenerationTime % 100) {
+            if (this.mapElements.players[player].hp > 90) {
+              this.mapElements.players[player].hp = 100;
+            }
+            else {
+              this.mapElements.players[player].hp += 10;
+            }
+          }
+        }
         for (let i = 0; i < this.mapElements.bonuses.length; i++) {
           const sideA = this.mapElements.players[player].position.x - this.mapElements.bonuses[i].position.x;
           const sideB = this.mapElements.players[player].position.y - this.mapElements.bonuses[i].position.y;
           if (Math.sqrt(sideA * sideA + sideB * sideB) < 45) {
-            switch (this.mapElements.players[player].src) {
+            switch (this.mapElements.bonuses[i].src) {
               case 'Bullet_minus':
+                this.mapElements.players[player].bulletSpeed = 0.5;
+                this.mapElements.players[player].bulletSpeedTime = 1000;
                 break;
               case 'Bullet_plus':
+                this.mapElements.players[player].bulletSpeed = 2;
+                this.mapElements.players[player].bulletSpeedTime = 1000;
                 break;
               case 'Bullet_strength_minus':
+                this.mapElements.players[player].strength = 0.5;
+                this.mapElements.players[player].strengthTime = 1000;
                 break;
               case 'Bullet_strength_plus':
+                this.mapElements.players[player].strength = 2;
+                this.mapElements.players[player].strengthTime = 1000;
                 break;
               case 'life_full':
+                this.mapElements.players[player].regenerationTime = 1000;
                 break;
               case 'life_full_now':
+                this.mapElements.players[player].hp = 100;
                 break;
               case 'life_minus':
+                this.mapElements.players[player].hp /= 2;
                 break;
               case 'Speed_x2_minus':
+                this.mapElements.players[player].speed = 0.5;
+                this.mapElements.players[player].speedTime = 1000;
                 break;
               case 'Speed_x2_plus':
+                this.mapElements.players[player].speed = 2;
+                this.mapElements.players[player].speedTime = 1000;
                 break;
               case 'Speed_x3_minus':
+                this.mapElements.players[player].speed = 1. / 3.;
+                this.mapElements.players[player].speedTime = 1000;
                 break;
               case 'Speed_x3_plus':
+                this.mapElements.players[player].speed = 3;
+                this.mapElements.players[player].speedTime = 1000;
                 break;
             }
             this.mapElements.bonuses.splice(i, 1);
@@ -100,6 +148,9 @@ export class EventsGateway implements OnGatewayDisconnect {
               time: this.time,
               lifeTime: 100,
               direction: { x: directionX, y: directionY },
+              speed: this.mapElements.players[player].bulletSpeed,
+              strength: this.mapElements.players[player].strength,
+
             });
             this.mapElements.players[player].lastShot = this.time;
           }
@@ -110,19 +161,21 @@ export class EventsGateway implements OnGatewayDisconnect {
       if (this.mapElements.bullets[bullet].lifeTime <= 0) {
         this.mapElements.bullets.splice(parseInt(bullet), 1);
       } else {
-        this.mapElements.bullets[bullet].position.x += this.mapElements.bullets[bullet].direction.x;
-        this.mapElements.bullets[bullet].position.y += this.mapElements.bullets[bullet].direction.y;
+        this.mapElements.bullets[bullet].position.x += this.mapElements.bullets[bullet].direction.x * this.mapElements.bullets[bullet].speed;
+        this.mapElements.bullets[bullet].position.y += this.mapElements.bullets[bullet].direction.y * this.mapElements.bullets[bullet].speed;
         this.mapElements.bullets[bullet].lifeTime--;
+        let removedBullet = false;
         for (let i = 0; i < this.mapElements.players.length; i++) {
           if (this.mapElements.players[i].hp > 0){
             const sideA = this.mapElements.players[i].position.x - this.mapElements.bullets[bullet].position.x;
             const sideB = this.mapElements.players[i].position.y - this.mapElements.bullets[bullet].position.y;
             if (this.mapElements.players[i].id !== this.mapElements.bullets[bullet].id && Math.sqrt(sideA * sideA + sideB * sideB) < 25) {
-              this.mapElements.players[i].hp -= this.mapElements.bullets[bullet].lifeTime / 2;
+              this.mapElements.players[i].hp -= this.mapElements.bullets[bullet].lifeTime * this.mapElements.bullets[bullet].strength / 2;
               if (this.mapElements.players[i].hp <= 0) {
                 this.players[i].isAlive = false;
               }
               this.mapElements.bullets.splice(parseInt(bullet),1);
+              removedBullet = true;
               break;
             }
           }
@@ -159,10 +212,17 @@ export class EventsGateway implements OnGatewayDisconnect {
     this.mapElements.players.push({
       id: client.id,
       color: this.colors[Math.floor(Math.random() * this.colors.length)],
-      position: { x: Math.floor(Math.random() * 500), y: Math.floor(Math.random() * 500) },
+      position: { x: Math.floor(Math.random() * 500 + 50), y: Math.floor(Math.random() * 500 + 50) },
       rotation: 0,
       hp: 100,
       lastShot: -1,
+      regenerationTime: 0,
+      speed: 1,
+      speedTime: 0,
+      bulletSpeed: 1,
+      bulletSpeedTime: 0,
+      strength: 1,
+      strengthTime: 0,
     });
   }
 
