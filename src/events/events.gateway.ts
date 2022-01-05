@@ -33,6 +33,8 @@ export class EventsGateway implements OnGatewayDisconnect {
       }
       if (this.players[player].controls.isKeyDown.s) this.mapElements.players[player].position.y += 2;
 
+      this.mapElements.players[player].rotation = (this.mapElements.players[player].rotation + 2) % 720;
+
       if (this.players[player].controls.isMouseDown || this.players[player].controls.autofire) {
         const found = this.mapElements.bullets.reverse().find(bullet => bullet.id === this.players[player].id);
         this.mapElements.bullets.reverse();
@@ -97,6 +99,7 @@ export class EventsGateway implements OnGatewayDisconnect {
       id: client.id,
       color: this.colors[Math.floor(Math.random() * this.colors.length)],
       position: { x: Math.floor(Math.random() * 500), y: Math.floor(Math.random() * 500) },
+      rotation: 0,
     });
   }
 
