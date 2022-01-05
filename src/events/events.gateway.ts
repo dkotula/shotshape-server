@@ -3,6 +3,7 @@ import { Server, Socket } from 'socket.io';
 import { Logger } from '@nestjs/common';
 
 const sqrt_2 = Math.sqrt(2);
+const bonuses = ['Bullet_minus', 'Bullet_plus', 'Bullet_strength_minus', 'Bullet_strength_plus', 'life_full', 'life_full_now', 'life_minus', 'Speed_x2_minus', 'Speed_x2_plus', 'Speed_x3_minus', 'Speed_x3_plus'];
 
 @WebSocketGateway()
 export class EventsGateway implements OnGatewayDisconnect {
@@ -11,6 +12,7 @@ export class EventsGateway implements OnGatewayDisconnect {
   private mapElements = {
     players: [],
     bullets: [],
+    bonuses: [],
   };
   private time = 0;
   private colors = ['red', 'yellow', 'blue', 'brown', 'purple', 'fuchsia', 'green', 'navy', 'aqua', 'cornflowerblue', 'crimson', 'darkgoldenrod', 'orange', 'darkorange', 'darkviolet', 'gold', 'indianred', 'lightslategrey'];
@@ -21,6 +23,12 @@ export class EventsGateway implements OnGatewayDisconnect {
   }, 10);
 
   private intervalRun = setInterval(() => {
+    if (this.mapElements.bonuses.length < 10 && this.time % 200 === 0) {
+      this.mapElements.bonuses.push({
+        src: bonuses[Math.floor(Math.random() * bonuses.length)],
+        position: { x: Math.floor(Math.random() * 1000), y: Math.floor(Math.random() * 800) },
+      });
+    }
     for (let player in this.players) {
       if (this.players[player].controls.isKeyDown.a) {
         if (this.mapElements.players[player].position.x < 2) this.mapElements.players[player].position.x = 0;
@@ -93,7 +101,13 @@ export class EventsGateway implements OnGatewayDisconnect {
     this.logger.log(`Client connected: ${client.id}`);
     this.players.push({
       id: client.id,
-      controls: { x: 0, y: 0, isMouseDown: false, isKeyDown: { a: false, d: false, w: false, s: false }, autofire: false },
+      controls: {
+        x: 0,
+        y: 0,
+        isMouseDown: false,
+        isKeyDown: { a: false, d: false, w: false, s: false },
+        autofire: false,
+      },
     });
     this.mapElements.players.push({
       id: client.id,
