@@ -8,6 +8,7 @@ const bonuses = ['Bullet_minus', 'Bullet_plus', 'Bullet_strength_minus', 'Bullet
 @WebSocketGateway()
 export class EventsGateway implements OnGatewayDisconnect {
   @WebSocketServer() server: Server;
+  private wsClients = [];
   private players = [];
   private mapElements = {
     players: [],
@@ -44,30 +45,29 @@ export class EventsGateway implements OnGatewayDisconnect {
 
         this.mapElements.players[player].rotation = (this.mapElements.players[player].rotation + 2) % 720;
         if (this.mapElements.players[player].speedTime > 0) {
-          this.mapElements.players[player].speedTime--
+          this.mapElements.players[player].speedTime--;
           if (this.mapElements.players[player].speedTime === 0) {
             this.mapElements.players[player].speed = 1;
           }
         }
         if (this.mapElements.players[player].bulletSpeedTime > 0) {
-          this.mapElements.players[player].bulletSpeedTime--
+          this.mapElements.players[player].bulletSpeedTime--;
           if (this.mapElements.players[player].bulletSpeedTime === 0) {
             this.mapElements.players[player].bulletSpeed = 1;
           }
         }
         if (this.mapElements.players[player].strengthTime > 0) {
-          this.mapElements.players[player].strengthTime--
+          this.mapElements.players[player].strengthTime--;
           if (this.mapElements.players[player].strengthTime === 0) {
             this.mapElements.players[player].strength = 1;
           }
         }
         if (this.mapElements.players[player].regenerationTime > 0) {
-          this.mapElements.players[player].regenerationTime--
+          this.mapElements.players[player].regenerationTime--;
           if (this.mapElements.players[player].regenerationTime % 100 === 0) {
             if (this.mapElements.players[player].hp > 90) {
               this.mapElements.players[player].hp = 100;
-            }
-            else {
+            } else {
               this.mapElements.players[player].hp += 10;
             }
           }
@@ -166,7 +166,7 @@ export class EventsGateway implements OnGatewayDisconnect {
         this.mapElements.bullets[bullet].lifeTime--;
         let removedBullet = false;
         for (let i = 0; i < this.mapElements.players.length; i++) {
-          if (this.mapElements.players[i].hp > 0){
+          if (this.mapElements.players[i].hp > 0) {
             const sideA = this.mapElements.players[i].position.x - this.mapElements.bullets[bullet].position.x;
             const sideB = this.mapElements.players[i].position.y - this.mapElements.bullets[bullet].position.y;
             if (this.mapElements.players[i].id !== this.mapElements.bullets[bullet].id && Math.sqrt(sideA * sideA + sideB * sideB) < 25) {
@@ -175,8 +175,10 @@ export class EventsGateway implements OnGatewayDisconnect {
                 this.players[i].isAlive = false;
                 const found = this.mapElements.players.find(el => el.id === this.mapElements.bullets[bullet].id);
                 found.points += 10;
+                const found2 = this.wsClients.find(el => el.id === this.players[i].id);
+                found2.emit('dead');
               }
-              this.mapElements.bullets.splice(parseInt(bullet),1);
+              this.mapElements.bullets.splice(parseInt(bullet), 1);
               removedBullet = true;
               break;
             }
@@ -221,6 +223,7 @@ export class EventsGateway implements OnGatewayDisconnect {
       },
       isAlive: false,
     });
+    this.wsClients.push(client);
     this.mapElements.players.push({
       id: client.id,
       color: this.colors[Math.floor(Math.random() * this.colors.length)],
@@ -236,7 +239,7 @@ export class EventsGateway implements OnGatewayDisconnect {
       strength: 1,
       strengthTime: 0,
       points: 0,
-      name: "",
+      name: '',
     });
   }
 
@@ -246,6 +249,9 @@ export class EventsGateway implements OnGatewayDisconnect {
       return obj.id !== client.id;
     });
     this.mapElements.players = this.mapElements.players.filter(function(obj) {
+      return obj.id !== client.id;
+    });
+    this.wsClients = this.wsClients.filter(function(obj) {
       return obj.id !== client.id;
     });
   }
