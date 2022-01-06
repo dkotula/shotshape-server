@@ -188,7 +188,7 @@ export class EventsGateway implements OnGatewayDisconnect {
   }, 10);
 
   @SubscribeMessage('position')
-  handleMessage(client: Socket, data: unknown): void {
+  handlePosition(client: Socket, data: unknown): void {
     for (let player in this.players) {
       if (this.players[player].id === client.id) {
         this.players[player].controls = data;
@@ -197,8 +197,18 @@ export class EventsGateway implements OnGatewayDisconnect {
     }
   }
 
+  @SubscribeMessage('start')
+  handleStart(client: Socket, name: string): void {
+    const found = this.mapElements.players.find(el => el.id === client.id);
+    found.hp = 100;
+    found.name = name;
+    const found2 = this.players.find(el => el.id === client.id);
+    found2.isAlive = true;
+    this.server.emit('start');
+  }
+
   @SubscribeMessage('client')
-  handleEvent(client: Socket, name: string): void {
+  handleEvent(client: Socket): void {
     this.logger.log(`Client connected: ${client.id}`);
     this.players.push({
       id: client.id,
@@ -209,14 +219,14 @@ export class EventsGateway implements OnGatewayDisconnect {
         isKeyDown: { a: false, d: false, w: false, s: false },
         autofire: false,
       },
-      isAlive: true,
+      isAlive: false,
     });
     this.mapElements.players.push({
       id: client.id,
       color: this.colors[Math.floor(Math.random() * this.colors.length)],
       position: { x: Math.floor(Math.random() * 500 + 50), y: Math.floor(Math.random() * 500 + 50) },
       rotation: 0,
-      hp: 100,
+      hp: 0,
       lastShot: -1,
       regenerationTime: 0,
       speed: 1,
@@ -226,7 +236,7 @@ export class EventsGateway implements OnGatewayDisconnect {
       strength: 1,
       strengthTime: 0,
       points: 0,
-      name: name,
+      name: "",
     });
   }
 
