@@ -173,6 +173,8 @@ export class EventsGateway implements OnGatewayDisconnect {
               this.mapElements.players[i].hp -= this.mapElements.bullets[bullet].lifeTime * this.mapElements.bullets[bullet].strength / 2;
               if (this.mapElements.players[i].hp <= 0) {
                 this.players[i].isAlive = false;
+                const found = this.mapElements.players.find(el => el.id === this.mapElements.bullets[bullet].id);
+                found.points += 10;
               }
               this.mapElements.bullets.splice(parseInt(bullet),1);
               removedBullet = true;
@@ -223,6 +225,7 @@ export class EventsGateway implements OnGatewayDisconnect {
       bulletSpeedTime: 0,
       strength: 1,
       strengthTime: 0,
+      points: 0,
     });
   }
 
