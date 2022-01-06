@@ -198,7 +198,7 @@ export class EventsGateway implements OnGatewayDisconnect {
   }
 
   @SubscribeMessage('client')
-  handleEvent(client: Socket): void {
+  handleEvent(client: Socket, name: string): void {
     this.logger.log(`Client connected: ${client.id}`);
     this.players.push({
       id: client.id,
@@ -226,6 +226,7 @@ export class EventsGateway implements OnGatewayDisconnect {
       strength: 1,
       strengthTime: 0,
       points: 0,
+      name: name,
     });
   }
 
