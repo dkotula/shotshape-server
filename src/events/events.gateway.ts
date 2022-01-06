@@ -9,7 +9,6 @@ const bonuses = ['Bullet_minus', 'Bullet_plus', 'Bullet_strength_minus', 'Bullet
 export class EventsGateway implements OnGatewayDisconnect {
   @WebSocketServer() server: Server;
   private wsClients = [];
-  private players = [];
   private mapElements = {
     players: [],
     bullets: [],
@@ -30,18 +29,18 @@ export class EventsGateway implements OnGatewayDisconnect {
         position: { x: Math.floor(Math.random() * 1000 + 50), y: Math.floor(Math.random() * 800 + 50) },
       });
     }
-    for (let player in this.players) {
-      if (this.players[player].isAlive) {
-        if (this.players[player].controls.isKeyDown.a) {
+    for (let player in this.mapElements.players) {
+      if (this.mapElements.players[player].isAlive) {
+        if (this.mapElements.players[player].controls.isKeyDown.a) {
           if (this.mapElements.players[player].position.x < 2 * this.mapElements.players[player].speed) this.mapElements.players[player].position.x = 0;
           else this.mapElements.players[player].position.x -= 2 * this.mapElements.players[player].speed;
         }
-        if (this.players[player].controls.isKeyDown.d) this.mapElements.players[player].position.x += 2 * this.mapElements.players[player].speed;
-        if (this.players[player].controls.isKeyDown.w) {
+        if (this.mapElements.players[player].controls.isKeyDown.d) this.mapElements.players[player].position.x += 2 * this.mapElements.players[player].speed;
+        if (this.mapElements.players[player].controls.isKeyDown.w) {
           if (this.mapElements.players[player].position.y < 2 * this.mapElements.players[player].speed) this.mapElements.players[player].position.y = 0;
           else this.mapElements.players[player].position.y -= 2 * this.mapElements.players[player].speed;
         }
-        if (this.players[player].controls.isKeyDown.s) this.mapElements.players[player].position.y += 2 * this.mapElements.players[player].speed;
+        if (this.mapElements.players[player].controls.isKeyDown.s) this.mapElements.players[player].position.y += 2 * this.mapElements.players[player].speed;
 
         this.mapElements.players[player].rotation = (this.mapElements.players[player].rotation + 2) % 720;
         if (this.mapElements.players[player].speedTime > 0) {
@@ -123,11 +122,11 @@ export class EventsGateway implements OnGatewayDisconnect {
           }
         }
 
-        if (this.players[player].controls.isMouseDown || this.players[player].controls.autofire) {
+        if (this.mapElements.players[player].controls.isMouseDown || this.mapElements.players[player].controls.autofire) {
           if (this.mapElements.players[player].lastShot !== -1 && (this.time - this.mapElements.players[player].lastShot + 1000) % 1000 < 50) {
           } else {
-            const sideA = this.players[player].controls.x - this.mapElements.players[player].position.x;
-            const sideB = this.players[player].controls.y - this.mapElements.players[player].position.y;
+            const sideA = this.mapElements.players[player].controls.x - this.mapElements.players[player].position.x;
+            const sideB = this.mapElements.players[player].controls.y - this.mapElements.players[player].position.y;
             const sideC = Math.sqrt(sideA * sideA + sideB * sideB);
             let directionX;
             let directionY;
@@ -172,11 +171,12 @@ export class EventsGateway implements OnGatewayDisconnect {
             if (this.mapElements.players[i].id !== this.mapElements.bullets[bullet].id && Math.sqrt(sideA * sideA + sideB * sideB) < 25) {
               this.mapElements.players[i].hp -= this.mapElements.bullets[bullet].lifeTime * this.mapElements.bullets[bullet].strength / 2;
               if (this.mapElements.players[i].hp <= 0) {
-                this.players[i].isAlive = false;
+                this.mapElements.players[i].isAlive = false;
                 const found = this.mapElements.players.find(el => el.id === this.mapElements.bullets[bullet].id);
                 found.points += 10;
-                const found2 = this.wsClients.find(el => el.id === this.players[i].id);
+                const found2 = this.wsClients.find(el => el.id === this.mapElements.players[i].id);
                 found2.emit('dead', this.mapElements.players[i].points);
+                this.mapElements.players[i].points = 0;
               }
               this.mapElements.bullets.splice(parseInt(bullet), 1);
               removedBullet = true;
@@ -191,9 +191,9 @@ export class EventsGateway implements OnGatewayDisconnect {
 
   @SubscribeMessage('position')
   handlePosition(client: Socket, data: unknown): void {
-    for (let player in this.players) {
-      if (this.players[player].id === client.id) {
-        this.players[player].controls = data;
+    for (let player in this.mapElements.players) {
+      if (this.mapElements.players[player].id === client.id) {
+        this.mapElements.players[player].controls = data;
         break;
       }
     }
@@ -205,25 +205,13 @@ export class EventsGateway implements OnGatewayDisconnect {
     found.hp = 100;
     found.name = name;
     found.position = { x: Math.floor(Math.random() * 500 + 50), y: Math.floor(Math.random() * 500 + 50) }
-    const found2 = this.players.find(el => el.id === client.id);
-    found2.isAlive = true;
+    found.isAlive = true;
     client.emit('start');
   }
 
   @SubscribeMessage('client')
   handleEvent(client: Socket): void {
     this.logger.log(`Client connected: ${client.id}`);
-    this.players.push({
-      id: client.id,
-      controls: {
-        x: 0,
-        y: 0,
-        isMouseDown: false,
-        isKeyDown: { a: false, d: false, w: false, s: false },
-        autofire: false,
-      },
-      isAlive: false,
-    });
     this.wsClients.push(client);
     this.mapElements.players.push({
       id: client.id,
@@ -241,14 +229,19 @@ export class EventsGateway implements OnGatewayDisconnect {
       strengthTime: 0,
       points: 0,
       name: '',
+      controls: {
+      x: 0,
+        y: 0,
+        isMouseDown: false,
+        isKeyDown: { a: false, d: false, w: false, s: false },
+      autofire: false,
+    },
+    isAlive: false,
     });
   }
 
   handleDisconnect(client: any): any {
     this.logger.log(`Client disconnected: ${client.id}`);
-    this.players = this.players.filter(function(obj) {
-      return obj.id !== client.id;
-    });
     this.mapElements.players = this.mapElements.players.filter(function(obj) {
       return obj.id !== client.id;
     });
