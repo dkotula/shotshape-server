@@ -176,7 +176,7 @@ export class EventsGateway implements OnGatewayDisconnect {
                 const found = this.mapElements.players.find(el => el.id === this.mapElements.bullets[bullet].id);
                 found.points += 10;
                 const found2 = this.wsClients.find(el => el.id === this.players[i].id);
-                found2.emit('dead');
+                found2.emit('dead', this.mapElements.players[i].points);
               }
               this.mapElements.bullets.splice(parseInt(bullet), 1);
               removedBullet = true;
@@ -204,9 +204,10 @@ export class EventsGateway implements OnGatewayDisconnect {
     const found = this.mapElements.players.find(el => el.id === client.id);
     found.hp = 100;
     found.name = name;
+    found.position = { x: Math.floor(Math.random() * 500 + 50), y: Math.floor(Math.random() * 500 + 50) }
     const found2 = this.players.find(el => el.id === client.id);
     found2.isAlive = true;
-    this.server.emit('start');
+    client.emit('start');
   }
 
   @SubscribeMessage('client')
